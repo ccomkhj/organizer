@@ -9,7 +9,7 @@ Every unchecked box in `wiki/daily/` lands in exactly one section of the briefin
 
 ## 1. Check the wiki is current
 
-`date +%Y-%m-%d` and `cat wiki/.last-sync`. When the last sync is more than 12 hours old, say so in one line and offer `/sync` — then brief on what the wiki already holds rather than stopping.
+`date +%Y-%m-%d` and `cat wiki/.last-sync.*`. When the oldest watermark is more than 12 hours old, say so in one line and offer `/sync` — then brief on what the wiki already holds rather than stopping. Skim `wiki/index.md` for the live topics.
 
 ## 2. Collect the open loops
 
@@ -35,4 +35,4 @@ Every unchecked box in `wiki/daily/` lands in exactly one section of the briefin
 
 Rank `## Today` by what someone else is blocked on or expecting, then prep for today's meetings, then everything else — at most five items. Anything open 7+ days goes under `## Aging` with the drop question, rather than sitting in the top list forever.
 
-When the user says an item is done, check its box in the daily note it came from (`- [x]`) so the next briefing drops it.
+When the user says an item is done, check its box in the daily note it came from (`- [x]`) so the next briefing drops it, and drop it from the person's `## Owed to` if listed there.

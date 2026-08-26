@@ -4,6 +4,7 @@ A second brain for [Claude Code](https://claude.com/claude-code). It reads what 
 
 - `/sync` — sweep everything since the last sync into `wiki/daily/<today>.md`
 - `/today` — collect the open actions across those notes and say what needs doing
+- `/lint` — health-check the wiki: dangling links, duplicate or stale actions, topics due for promotion
 
 Your notes never leave your machine: `wiki/` is gitignored, so only the skills and the conventions are public.
 
@@ -20,16 +21,16 @@ Your notes never leave your machine: `wiki/` is gitignored, so only the skills a
    - Mailbox: ada@example.com (Microsoft 365 / Outlook)
    ```
 
-3. Run `/sync`. First run sweeps the last 24 hours and writes the `wiki/.last-sync` watermark; every run after that picks up where the last one stopped.
+3. Run `/sync`. First run sweeps the last 24 hours and writes a `wiki/.last-sync.<source>` watermark per source; every run after that picks up where the last one stopped.
 4. Run `/today` for the briefing.
 
 ## Layout
 
 | Path | What |
 | --- | --- |
-| `skills/` | The two skills. `.claude/skills` is a symlink here, so anything you add is picked up. |
+| `skills/` | The three skills. `.claude/skills` is a symlink here, so anything you add is picked up. Connector specifics live in `skills/sync/sources/`. |
 | `CLAUDE.md` | Wiki layout and note conventions — read by every run. |
-| `wiki/` | Your notes. Gitignored. |
+| `wiki/` | Your notes: `daily/`, `topics/`, `people/`, plus `index.md` (catalog) and `log.md` (what happened when). Gitignored. |
 
 ## Scheduling
 
@@ -37,4 +38,4 @@ Unwired by design — `/sync` is manual. The intended path is a launchd or cron 
 
 ## Adding to it
 
-The setup is deliberately small: two skills, one conventions file, markdown checkboxes as the only state. To add a source (calendar, Linear, GitHub), add a sweep step to `skills/sync/SKILL.md` and a section to the daily-note template — nothing else needs to know about it.
+The setup is deliberately small: three skills, one conventions file, markdown checkboxes as the only state. To add a source (calendar, Linear, GitHub), drop a `skills/sync/sources/<name>.md` describing its sweep and quirks, list it in `skills/sync/SKILL.md`, and add a section to the daily-note template — it gets its own `.last-sync.<name>` watermark and nothing else needs to know about it.

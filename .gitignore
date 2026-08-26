@@ -1,0 +1,7 @@
+# Notes and everything derived from them — private, never committed
+wiki/
+
+# Machine-local Claude Code state
+.claude/settings.local.json
+
+.DS_Store

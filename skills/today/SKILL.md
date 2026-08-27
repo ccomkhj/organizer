@@ -76,6 +76,10 @@ Rules of the layout:
 - Section headings carry counts (`## Today — 5 of 13`) so the owner sees the shape of the day without reading the body.
 - Name people, link them `[[Name]]` on first mention per section.
 
-## 6. When the user marks items done
+## 6. Open the checklist
 
-Check the box in the daily note it came from (`- [x]`) so the next briefing drops it. Then, on each person page the item was listed under `## Owed to`, remove the line and bump `updated:` to today; when that leaves `## Owed to` empty, remove the heading too — quieter people pages omit the section rather than carry it empty. Reply with the new open count and what moved into the top five.
+After the briefing, run `python3 skills/today/scripts/todo.py`. It serves every open box as a clickable checklist at `http://127.0.0.1:8642/`, opens it in the browser, and stays running in the background (`python3 skills/today/scripts/todo.py stop` ends it). Ticking a box rewrites `- [ ]` to `- [x]` in the daily note the line came from — the same edit you would make by hand, so the next briefing drops it. End the briefing with the URL on its own line.
+
+## 7. When the user marks items done in chat
+
+Check the box in the daily note it came from (`- [x]`) and reply with the new open count and what moved into the top five. Person pages (`## Owed to`) are not touched here — whether a box was ticked on the page or in chat, `/lint` reconciles them.

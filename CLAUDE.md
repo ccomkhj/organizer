@@ -19,7 +19,7 @@ Every page opens with frontmatter: `type` (`daily`|`topic`|`person`|`index`), `d
 ## Conventions
 
 - Absolute dates always (`2026-08-26`), never "yesterday".
-- An action is a markdown checkbox: `- [ ] <what> — <who it is for>, <source link>`. Daily notes are the single source of truth for actions; `/today` collects the unchecked boxes across `wiki/daily/`.
+- An action is a markdown checkbox: `- [ ] <what> — <who it is for>, <source link>`. Daily notes are the single source of truth for actions; `/today` collects the unchecked boxes across `wiki/daily/` and serves them as a checklist (`skills/today/scripts/todo.py`) whose ticks write `- [x]` straight back into the note.
 - An action lives in exactly one daily note. Before writing one, grep the open boxes for it; if it is already open, append ` · re-raised YYYY-MM-DD` to the existing line instead of writing a new one.
 - What you owe someone goes under `## Actions`. What someone owes you goes under `## Waiting on`.
 - Link people, topics and days as `[[Dana Fischer]]`, `[[topics/warehouse-rollout]]`, `[[2026-08-26]]` — basenames resolve, so a person's page is `wiki/people/Dana Fischer.md`.

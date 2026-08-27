@@ -3,7 +3,7 @@
 A second brain for [Claude Code](https://claude.com/claude-code). It reads what came through your Slack and Outlook and writes it down as a wiki of exchanges, decisions and open actions. Two flows:
 
 - `/sync` — sweep everything since the last sync into `wiki/daily/<today>.md`
-- `/today` — collect the open actions across those notes and say what needs doing
+- `/today` — collect the open actions across those notes, say what needs doing, and open them as a clickable checklist at `http://127.0.0.1:8642/` — a tick marks the box done in its daily note
 - `/lint` — health-check the wiki: dangling links, duplicate or stale actions, topics due for promotion
 
 Your notes never leave your machine: `wiki/` is gitignored, so only the skills and the conventions are public.
@@ -28,7 +28,7 @@ Your notes never leave your machine: `wiki/` is gitignored, so only the skills a
 
 | Path | What |
 | --- | --- |
-| `skills/` | The three skills. `.claude/skills` is a symlink here, so anything you add is picked up. Connector specifics live in `skills/sync/sources/`. |
+| `skills/` | The three skills. `.claude/skills` is a symlink here, so anything you add is picked up. Connector specifics live in `skills/sync/sources/`; `skills/today/scripts/todo.py` is the checklist server (stdlib Python, `python3 skills/today/scripts/todo.py [stop]`). |
 | `CLAUDE.md` | Wiki layout and note conventions — read by every run. |
 | `wiki/` | Your notes: `daily/`, `topics/`, `people/`, plus `index.md` (catalog) and `log.md` (what happened when). Gitignored. |
 

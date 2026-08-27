@@ -112,9 +112,10 @@ PAGE = """<!doctype html>
   .person, .topic { padding: 0 .35em; border-radius: 3px; }
   .person { background: var(--person); } .topic { background: var(--topic); }
   .empty { color: var(--muted); }
-  .error { color: #c33; }
+  .banner { background: #c33; color: #fff; padding: .5rem .75rem; border-radius: 4px; margin-bottom: 1rem; }
 </style>
 <h1>Open actions <small id="count">{{TOTAL}}</small></h1>
+<div id="banner" class="banner" hidden></div>
 <div class="status">{{TODAY}} · a tick rewrites the box in <code>wiki/daily/&lt;date&gt;.md</code> · reload to refresh</div>
 {{BODY}}
 <script>
@@ -122,12 +123,16 @@ PAGE = """<!doctype html>
   document.querySelectorAll('.item input').forEach(box => box.addEventListener('change', async () => {
     const item = box.closest('.item');
     item.classList.add('busy');
-    const r = await fetch('/toggle', { method: 'POST', body: JSON.stringify({ file: box.dataset.file, line: +box.dataset.line, done: box.checked }) });
+    let r;
+    try { r = await fetch('/toggle', { method: 'POST', body: JSON.stringify({ file: box.dataset.file, line: +box.dataset.line, done: box.checked }) }); }
+    catch (e) { r = null; }
     item.classList.remove('busy');
-    if (!r.ok) { box.checked = !box.checked; item.classList.add('error'); item.title = 'Line moved — reload the page'; return; }
+    if (!r) { box.checked = !box.checked; fail('Server not running — nothing was saved. Run  python3 skills/today/scripts/todo.py  and reload.'); return; }
+    if (!r.ok) { box.checked = !box.checked; fail('That line moved in the note — reload the page and tick again.'); return; }
     item.classList.toggle('done', box.checked);
     count.textContent = document.querySelectorAll('.item:not(.done)').length;
   }));
+  function fail(msg) { const b = document.getElementById('banner'); b.textContent = msg; b.hidden = false; }
 </script>
 """
 

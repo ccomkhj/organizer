@@ -90,6 +90,8 @@ Each box checked here is committed and pushed as `tick <date>`, the same way `to
 When the cloud routine runs this, nobody is in chat. Never ask, never wait.
 
 - **Always sync** in step 1, whatever the watermarks say. A morning briefing that skips the night is the one failure this run exists to prevent.
+- **Sync in full.** Follow every cursor, read the threads that carry a decision or a question, and refresh people pages, exactly as `/sync` says. Nobody is waiting on this run, so never sample or abridge. Anything left unread inside the window is lost for good once its watermark advances.
+- **Load connector tools before calling them.** They may be deferred. Fetch each one with ToolSearch first, `outlook_send_mail` included. A tool counts as missing only when ToolSearch cannot find it.
 - **Skip steps 6 and 7.** There is no checklist server and nobody to act in chat.
 - **Deliver the briefing twice.** The owner's Slack id and mailbox are in `wiki/identity.md`.
   - **Slack DM** — `mcp__claude_ai_Slack__slack_send_message` with `channel_id` = the owner's Slack id. Send the status line, the meetings line, `## Today`, and any ⚠ waiting-on lines, then the session link. Write it in standard markdown (the tool converts it), with `[[Name]]` as plain names and at most 5000 characters.

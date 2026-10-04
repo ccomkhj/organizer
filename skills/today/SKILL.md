@@ -1,49 +1,51 @@
 ---
 name: today
-description: Brief the user on what needs doing today from the wiki — open actions, what they are waiting on, today's meetings, and the merge state of any GitHub PR an action points at. Use when the user asks what is on their plate, what to do today, or for a morning briefing.
+description: Morning briefing from the wiki — open actions, what the user is waiting on, today's meetings, and the merge state of any PR an action cites; syncs first when the wiki is stale. Use when the user asks what is on their plate, what to do today, or for a briefing.
 ---
 
 # What needs doing today
 
 Every unchecked box in `wiki/daily/` lands in exactly one of the four briefing sections — nothing open goes unmentioned, nothing appears twice. Read `CLAUDE.md` for the wiki conventions.
 
-## 1. Check the wiki is current
+## 1. Bring the wiki current
 
-`date -u +%Y-%m-%dT%H:%MZ` and `cat wiki/.last-sync.*`. When the oldest watermark is more than 12 hours old, say so in the status line and offer `/sync` — then brief on what the wiki already holds rather than stopping. Skim `wiki/index.md` for the live topics.
+`date -u +%Y-%m-%dT%H:%MZ` and `cat wiki/.last-sync.*`. Oldest watermark over 12 hours old → say the wiki is `<n>h` stale and run `/sync` before briefing; it writes the notes for the days the window spans, and their new `- [ ]` lines join the open set. Under 12 hours → brief on the wiki as it stands.
+
+A failed source or a connector that will not resolve never cancels the briefing: report it in the status line and brief on what the wiki holds. Then skim `wiki/index.md` for the live topics.
 
 ## 2. Collect the open loops
 
 - `grep -rn '^- \[ \]' wiki/daily/` — open actions. The filename gives each one its age.
-- `grep -rn -A20 '^## Waiting on' wiki/daily/` — what others owe the owner, and since when. A line that names a deadline ("by EOD 2026-08-26", "needed by Friday") is **overdue** once that date has passed.
+- `grep -rn -A20 '^## Waiting on' wiki/daily/` — what others owe the owner, and since when. A line naming a deadline ("by EOD 2026-08-26") is **overdue** once that date has passed.
 
 ## 3. Check the PRs
 
-Open actions cite GitHub PRs two ways: a full `https://github.com/ORG/REPO/pull/N` link, or a bare `#N` with the repo named in the surrounding text (`dag_repo PRs … #331`). Resolve each one:
+Actions cite PRs as a full `https://github.com/ORG/REPO/pull/N` link or as a bare `#N` with the repo named nearby (`dag_repo PRs … #331`). Resolve each:
 
 ```sh
 gh pr view <url> --json state,mergedAt,title
 gh pr view <N> --repo VOIDSTechnology/<repo> --json state,mergedAt,title
 ```
 
-A bare `#N` whose repo the text does not name is skipped and listed as unresolved in the briefing. Every resolved PR gets a tag on its action line: `PR #104 open`, `PR #6 merged 2026-08-21`, `PR #303 closed unmerged`.
+A bare `#N` with no repo in the text is listed as unresolved. Every resolved PR gets a tag on its line: `PR #104 open`, `PR #6 merged 2026-08-21`, `PR #303 closed unmerged`.
 
-Merged is a **signal, not a done**. Two cases:
+Merged is a **signal, not a done**:
 
-- The action *is* the PR — review, deploy, test, triage it. Merged means the action is probably complete: put it under `## Done since last brief?` and ask.
-- The PR is *context* for a follow-up — "raise `min_replicas` after PR #6". Merged changes nothing; the follow-up stays where it belongs, with the tag on it.
+- The action *is* the PR — review, deploy, test, triage it → it goes under `## Done since last brief?` with the question.
+- The PR is *context* for a follow-up ("raise `min_replicas` after PR #6") → the follow-up stays where it belongs, tag attached.
 
 ## 4. Pull today's calendar
 
-`mcp__claude_ai_Microsoft_365__outlook_calendar_search` for today, `order: oldest`. A meeting whose subject or attendees match an open action turns that action into prep work due before the meeting.
+`mcp__claude_ai_Microsoft_365__outlook_calendar_search` for today, `order: oldest`. Times in Europe/Berlin — the tool returns UTC. List only meetings still ahead. A meeting whose subject or attendees match an open action turns that action into prep work due before it.
 
 ## 5. Deliver the briefing
 
-Scannable first, complete second: the owner reads the status line and `## Today`, and everything below is there when they need it. One line per item where a line will do; two at most.
+Scannable first, complete second: the owner reads the status line and `## Today`; the rest is there when needed. One line per item, two at most.
 
 ```md
-**2026-08-27** · synced 11h ago · 13 open · 1 meeting
+**2026-08-27** · synced just now · 4 slack, 2 mail, 3 new actions · 13 open · 1 meeting left
 
-**Meetings** — 07:30 Daily Stand Up Tech Team (Tobi, Cristian, Illia, Pawan, Sergei)
+**Meetings** — 09:30 Daily Stand Up Tech Team (Tobi, Cristian, Illia, Pawan, Sergei)
 
 ## Today — 5 of 13
 1. **Start the `drmersclub` pipeline** — [[Pia Bahr]] blocked, cannot trigger from admin · `2026-08-26`
@@ -65,21 +67,20 @@ Scannable first, complete second: the owner reads the status line and `## Today`
 - `magicperfumes` airbyte date — blocked on Pia naming it · `2026-08-24`
 ```
 
-Rules of the layout:
+What the example cannot show:
 
-- **Status line** first: date, sync age, open count, meeting count. The `/sync` offer goes here when the watermark is stale.
-- **Today** — at most five, ranked: what someone else is blocked on or expecting, then prep for today's meetings, then everything else. Each item is `**verb-first title** — why now · PR tag if any · \`daily-note date\``. The date in backticks stands in for the path — `wiki/daily/<date>.md` is implied.
-- **Done since last brief?** — only appears when a PR-is-the-action item resolved to merged. Omit the section when empty.
-- **Waiting on** — one line per person, their items joined with `;`, each with age in days. ⚠ leads any line past a stated deadline, and those sort to the top.
-- **Aging** — every action open 7+ days that is not in Today, each ending with the drop question. Age in days, not dates.
-- **Backlog** — everything open that landed nowhere above. Terse: title, blocker or PR tag if any, date. This section exists so the four sections partition the open set exactly; an item that would need a fifth section belongs here.
-- Section headings carry counts (`## Today — 5 of 13`) so the owner sees the shape of the day without reading the body.
-- Name people, link them `[[Name]]` on first mention per section.
+- **Today** holds at most five, ranked: what someone else is blocked on or expecting, then prep for today's meetings, then the rest. The backticked date stands for `wiki/daily/<date>.md`.
+- **Waiting on** is one line per person, items joined with `;`, each with its age in days; ⚠ lines sort first.
+- **Aging** is every action open 7+ days that is not in Today. **Backlog** is everything else, so the four sections partition the open set exactly — an item that seems to need a fifth section belongs here.
+- `## Done since last brief?` is omitted when empty. People are linked `[[Name]]` on first mention per section.
 
 ## 6. Open the checklist
 
-After the briefing, run `python3 skills/today/scripts/todo.py`. It serves every open box as a clickable checklist at `http://127.0.0.1:8642/`, opens it in the browser, and stays running in the background (`python3 skills/today/scripts/todo.py stop` ends it). Ticking a box rewrites `- [ ]` to `- [x]` in the daily note the line came from — the same edit you would make by hand, so the next briefing drops it. End the briefing with the URL on its own line.
+Run `python3 skills/today/scripts/todo.py` — it serves the open boxes as a checklist whose ticks write `- [x]` back into the notes, and prints its URL. End the briefing with that URL on its own line.
 
-## 7. When the user marks items done in chat
+## 7. When the user acts on an item in chat
 
-Check the box in the daily note it came from (`- [x]`) and reply with the new open count and what moved into the top five. Person pages (`## Owed to`) are not touched here — whether a box was ticked on the page or in chat, `/lint` reconciles them.
+- **Marks it done** → check the box in its daily note and reply with the new open count and what moved into the top five.
+- **Asks you to do it** → look at the target system's current state first: the line was written from a Slack fragment and may already be partly done. Then do it, check the box, and append the outcome to the line (`· DSE-1618, PE-1597 created 2026-08-28`).
+
+Person pages (`## Owed to`) are not touched here; `/lint` reconciles them.

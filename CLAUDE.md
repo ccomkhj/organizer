@@ -1,6 +1,6 @@
 # Second brain
 
-A wiki of what came through the owner's Slack and Outlook, and the actions that fell out of it. Three flows: `/sync` writes the day in, `/today` reads the day out, `/lint` keeps the wiki honest.
+A wiki of what came through the owner's Slack and Outlook, and the actions that fell out of it. Three flows: `/sync` writes the day in, `/today` reads the day out (syncing first when the wiki is over 12 hours stale), `/lint` keeps the wiki honest.
 
 ## Wiki layout
 

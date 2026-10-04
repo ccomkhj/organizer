@@ -9,7 +9,7 @@ Every unchecked box in `wiki/daily/` lands in exactly one of the four briefing s
 
 ## 1. Bring the wiki current
 
-`date -u +%Y-%m-%dT%H:%MZ` and `cat wiki/.last-sync.*`. Oldest watermark over 12 hours old → say the wiki is `<n>h` stale and run `/sync` before briefing; it writes the notes for the days the window spans, and their new `- [ ]` lines join the open set. Under 12 hours → brief on the wiki as it stands.
+`git -C wiki pull --rebase --autostash` first. Syncs and ticks made by the other writer arrive this way. Then `date -u +%Y-%m-%dT%H:%MZ` and `cat wiki/.last-sync.*`. Oldest watermark over 12 hours old → say the wiki is `<n>h` stale and run `/sync` before briefing; it writes the notes for the days the window spans, and their new `- [ ]` lines join the open set. Under 12 hours → brief on the wiki as it stands.
 
 A failed source or a connector that will not resolve never cancels the briefing: report it in the status line and brief on what the wiki holds. Then skim `wiki/index.md` for the live topics.
 
@@ -83,4 +83,16 @@ Run `python3 skills/today/scripts/todo.py` — it serves the open boxes as a che
 - **Marks it done** → check the box in its daily note and reply with the new open count and what moved into the top five.
 - **Asks you to do it** → look at the target system's current state first: the line was written from a Slack fragment and may already be partly done. Then do it, check the box, and append the outcome to the line (`· DSE-1618, PE-1597 created 2026-08-28`).
 
-Person pages (`## Owed to`) are not touched here; `/lint` reconciles them.
+Each box checked here is committed and pushed as `tick <date>`, the same way `todo.py` pushes its ticks. Otherwise the routine re-raises the action the next morning. Person pages (`## Owed to`) are not touched here; `/lint` reconciles them.
+
+## Unattended runs
+
+When the cloud routine runs this, nobody is in chat. Never ask, never wait.
+
+- **Always sync** in step 1, whatever the watermarks say. A morning briefing that skips the night is the one failure this run exists to prevent.
+- **Skip steps 6 and 7.** There is no checklist server and nobody to act in chat.
+- **Deliver the briefing twice.** The owner's Slack id and mailbox are in `wiki/identity.md`.
+  - **Slack DM** — `mcp__claude_ai_Slack__slack_send_message` with `channel_id` = the owner's Slack id. Send the status line, the meetings line, `## Today`, and any ⚠ waiting-on lines, then the session link. Write it in standard markdown (the tool converts it), with `[[Name]]` as plain names and at most 5000 characters.
+  - **Email** — `mcp__claude_ai_Microsoft_365__outlook_send_mail` to the owner's mailbox, subject `Briefing <date>`, `bodyType: "html"`. Send the full briefing, then the session link.
+- **Session link** — `echo "https://claude.ai/code/${CLAUDE_CODE_REMOTE_SESSION_ID/#cse_/session_}"`.
+- **Failures are reported, never fatal.** A channel that fails is named in the other one (`Slack DM failed: <error>`) and never stops it. If both fail, say so in the transcript. A failed sync is reported in the status line of both, as in step 1.

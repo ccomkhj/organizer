@@ -18,4 +18,4 @@ Read `CLAUDE.md` first. Report everything, then fix only what the user confirms 
 
 ## Output
 
-One table per check: finding → proposed fix → file. Apply the confirmed fixes, then append `## [<today>] lint | <n> findings, <n> fixed` to `wiki/log.md`.
+One table per check: finding → proposed fix → file. Pull the wiki before checking (`CLAUDE.md`). Apply the confirmed fixes, append `## [<today>] lint | <n> findings, <n> fixed` to `wiki/log.md`, then commit and push the wiki as `lint <today>`.

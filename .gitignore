@@ -1,5 +1,6 @@
-# Notes and everything derived from them — private, never committed
-wiki/
+# Notes and everything derived from them — a checkout of the private wiki repo, never committed here.
+# No trailing slash, so the symlink a cloud run creates is ignored too.
+wiki
 
 # Machine-local Claude Code state
 .claude/settings.local.json

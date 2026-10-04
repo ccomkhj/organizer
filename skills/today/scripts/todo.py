@@ -4,14 +4,16 @@
     python3 skills/today/scripts/todo.py         # start the server (if not running) and open the page
     python3 skills/today/scripts/todo.py stop    # stop it
 
-Ticking a box rewrites `- [ ]` to `- [x]` in the daily note the line came from.
-The daily notes stay the single source of truth; this page is only a view on them.
-Standard library only, bound to 127.0.0.1.
+Ticking a box rewrites `- [ ]` to `- [x]` in the daily note the line came from,
+then, when wiki/ is a git checkout, commits and pushes it in the background so the
+cloud routine sees it. The daily notes stay the single source of truth; this page
+is only a view on them. Standard library only, bound to 127.0.0.1.
 """
 import html
 import json
 import os
 import re
+import subprocess
 import sys
 import threading
 import urllib.request
@@ -21,7 +23,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-DAILY = ROOT / "wiki" / "daily"
+WIKI = ROOT / "wiki"
+DAILY = WIKI / "daily"
 PORT = 8642
 URL = f"http://127.0.0.1:{PORT}/"
 
@@ -57,6 +60,32 @@ def toggle(file, line, done):
     lines[line] = "- [x] " + lines[line][6:] if done else "- [ ] " + lines[line][6:]
     path.write_text("\n".join(lines))
     return lines[line]
+
+
+# --- push -------------------------------------------------------------------
+
+PUSH_LOCK = threading.Lock()
+
+
+def git(*args):
+    env = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
+    try:
+        return subprocess.run(["git", "-C", str(WIKI), *args], stdin=subprocess.DEVNULL,
+                              capture_output=True, env=env, timeout=60).returncode == 0
+    except subprocess.TimeoutExpired:
+        return False
+
+
+def push(file):
+    """Commit one tick and push it. A failed rebase keeps the local commit; the next tick or `/today` pull retries."""
+    if not (WIKI / ".git").exists():
+        return
+    with PUSH_LOCK:
+        git("commit", "-qm", f"tick {file}", "--", f"daily/{file}")
+        if not git("pull", "--rebase", "--autostash", "-q"):
+            git("rebase", "--abort")
+            return
+        git("push", "-q")
 
 
 # --- render -----------------------------------------------------------------
@@ -164,9 +193,11 @@ class Handler(BaseHTTPRequestHandler):
         if self.path != "/toggle":
             return self._send(404, "not found", "text/plain")
         req = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))
-        new = toggle(str(req.get("file", "")), int(req.get("line", -1)), bool(req.get("done")))
+        file = str(req.get("file", ""))
+        new = toggle(file, int(req.get("line", -1)), bool(req.get("done")))
         if new is None:
             return self._send(409, json.dumps({"error": "line moved; reload"}), "application/json")
+        threading.Thread(target=push, args=(file,)).start()
         self._send(200, json.dumps({"line": new}), "application/json")
 
 

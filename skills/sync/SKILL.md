@@ -5,9 +5,11 @@ description: Sweep Slack DMs/mentions and Outlook mail since the last sync into 
 
 # Sync the day into the wiki
 
-Every exchange in the window lands in the daily note or is counted in its `## Noise` line — nothing in the window goes unaccounted for. Read `CLAUDE.md` for layout and conventions, and `wiki/identity.md` for the owner's Slack id and mailbox (gitignored, never ships with the repo).
+Every exchange in the window lands in the daily note or is counted in its `## Noise` line — nothing in the window goes unaccounted for. Read `CLAUDE.md` for layout and conventions, and `wiki/identity.md` for the owner's Slack id and mailbox (it lives in the private wiki repo, never in this one).
 
 ## 1. Fix the windows
+
+No `wiki/identity.md` → the wiki repo is not checked out. Stop and say so. Never treat this as a first run. That would sweep one day into a directory no later run will see. Otherwise `git -C wiki pull --rebase --autostash` before reading anything, because the other writer may have advanced the watermarks.
 
 End = `date -u +%Y-%m-%dT%H:%M:%SZ`. Start = `cat wiki/.last-sync.<source>` per source; a missing watermark means a first run — start 24 hours back. Report the windows in chat before sweeping.
 
@@ -63,8 +65,8 @@ One line per exchange, stating what was *settled or asked* — a reader six week
 
 ## 5. Close the loop
 
-Write each source's window end to its watermark, then report in chat: the windows, counts per source, and the new action lines verbatim.
+Write each source's window end to its watermark, then commit and push the wiki as `sync <today>` (`CLAUDE.md` has the command). The next run, cloud or laptop, starts from whatever watermark reached `main`, so an unpushed sync is swept again. Then report in chat: the windows, counts per source, and the new action lines verbatim.
 
 ## Scheduled runs
 
-Not wired. The intended path is a launchd job running `claude -p /sync` in this repo; before trusting it, confirm the Slack and Microsoft 365 connectors resolve in a headless run — they are interactively authenticated and may be absent there.
+A Claude Code routine runs `/today` unattended on weekdays at 07:00 Europe/Berlin, and that run always syncs first (`skills/today/SKILL.md`, "Unattended runs"). It clones this repo and `ccomkhj/organizer-wiki`, links the latter to `./wiki`, and sees the claude.ai Slack and Microsoft 365 connectors. Its only state is what step 5 pushes: each run starts from a fresh clone.

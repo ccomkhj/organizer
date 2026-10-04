@@ -4,10 +4,11 @@
     python3 skills/today/scripts/todo.py         # start the server (if not running) and open the page
     python3 skills/today/scripts/todo.py stop    # stop it
 
-Ticking a box rewrites `- [ ]` to `- [x]` in the daily note the line came from,
-then, when wiki/ is a git checkout, commits and pushes it in the background so the
-cloud routine sees it. The daily notes stay the single source of truth; this page
-is only a view on them. Standard library only, bound to 127.0.0.1.
+Ticking a box rewrites `- [ ]` to `- [x]` in the daily note the line came from.
+When wiki/ is a git checkout, each page load and each tick pulls first and each tick
+is pushed, so the page and the cloud routine see the same notes. The daily notes
+stay the single source of truth; this page is only a view on them.
+Standard library only, bound to 127.0.0.1.
 """
 import html
 import json
@@ -49,43 +50,67 @@ def open_actions():
     return groups
 
 
-def toggle(file, line, done):
-    """Flip one checkbox in place. Returns the new line, or None if the target moved."""
+def toggle(file, line, text, done):
+    """Flip one checkbox in place. Returns the new line, or None if the target is gone.
+
+    A pull since the page rendered can shift lines, so the box is matched by its text
+    and looked up again when it is no longer at its line.
+    """
     if not NOTE.match(file):
         return None
     path = DAILY / file
     lines = path.read_text().split("\n")
-    if not (0 <= line < len(lines)) or not BOX.match(lines[line]):
-        return None
+    if not (0 <= line < len(lines) and BOX.match(lines[line]) and lines[line][6:] == text):
+        hits = [n for n, l in enumerate(lines) if BOX.match(l) and l[6:] == text]
+        if len(hits) != 1:
+            return None
+        line = hits[0]
     lines[line] = "- [x] " + lines[line][6:] if done else "- [ ] " + lines[line][6:]
     path.write_text("\n".join(lines))
     return lines[line]
 
 
-# --- push -------------------------------------------------------------------
+# --- pull / push ------------------------------------------------------------
+# The cloud routine writes the wiki too. A page load pulls; a tick pulls, is written
+# onto the fresh note, and is pushed at once, so a tick never has to be rebased over
+# a cloud edit next to it. All git work is a no-op when wiki/ is not a git checkout.
 
-PUSH_LOCK = threading.Lock()
+GIT_LOCK = threading.Lock()
 
 
-def git(*args):
+def git(*args, timeout=60):
     env = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
     try:
         return subprocess.run(["git", "-C", str(WIKI), *args], stdin=subprocess.DEVNULL,
-                              capture_output=True, env=env, timeout=60).returncode == 0
+                              capture_output=True, env=env, timeout=timeout).returncode == 0
     except subprocess.TimeoutExpired:
         return False
 
 
+def pull(timeout=60):
+    """Rebase onto origin. A conflict is aborted, keeping local commits for the next try."""
+    if git("pull", "--rebase", "--autostash", "-q", timeout=timeout):
+        return True
+    git("rebase", "--abort")
+    return False
+
+
+def refresh():
+    """Pull what the cloud routine synced. False when offline or stuck on a conflict: the notes here may be stale."""
+    if not (WIKI / ".git").exists():
+        return True
+    with GIT_LOCK:
+        return pull(timeout=10)
+
+
 def push(file):
-    """Commit one tick and push it. A failed rebase keeps the local commit; the next tick or `/today` pull retries."""
+    """Commit one tick and push it. Rejected → pull and push once more; still failing, the commit waits for the next one."""
     if not (WIKI / ".git").exists():
         return
-    with PUSH_LOCK:
+    with GIT_LOCK:
         git("commit", "-qm", f"tick {file}", "--", f"daily/{file}")
-        if not git("pull", "--rebase", "--autostash", "-q"):
-            git("rebase", "--abort")
-            return
-        git("push", "-q")
+        if not git("push", "-q") and pull():
+            git("push", "-q")
 
 
 # --- render -----------------------------------------------------------------
@@ -100,7 +125,7 @@ def render_text(text):
     return t
 
 
-def render_page():
+def render_page(fresh=True):
     today = date.today()
     groups = open_actions()
     total = sum(len(items) for _, items in groups)
@@ -111,13 +136,17 @@ def render_page():
         body.append(f'<section><h2>{day} <small>{date.fromisoformat(day):%a} · {when}</small></h2>')
         for it in items:
             body.append(
-                f'<label class="item"><input type="checkbox" data-file="{it["file"]}" data-line="{it["line"]}">'
+                f'<label class="item"><input type="checkbox" data-file="{it["file"]}" data-line="{it["line"]}" data-text="{html.escape(it["text"])}">'
                 f'<span>{render_text(it["text"])}</span></label>'
             )
         body.append("</section>")
     if not groups:
         body.append("<p class='empty'>Nothing open. 🎉</p>")
-    return PAGE.replace("{{TOTAL}}", str(total)).replace("{{TODAY}}", today.isoformat()).replace("{{BODY}}", "\n".join(body))
+    page = PAGE if fresh else PAGE.replace('class="banner" hidden>', f'class="banner">{STALE}')
+    return page.replace("{{TOTAL}}", str(total)).replace("{{TODAY}}", today.isoformat()).replace("{{BODY}}", "\n".join(body))
+
+
+STALE = "Could not pull the wiki (offline, or a conflict) — these are the notes on this machine. Ticks still save here; run /today to reconcile."
 
 
 PAGE = """<!doctype html>
@@ -145,7 +174,7 @@ PAGE = """<!doctype html>
 </style>
 <h1>Open actions <small id="count">{{TOTAL}}</small></h1>
 <div id="banner" class="banner" hidden></div>
-<div class="status">{{TODAY}} · a tick rewrites the box in <code>wiki/daily/&lt;date&gt;.md</code> · reload to refresh</div>
+<div class="status">{{TODAY}} · a tick rewrites the box in <code>wiki/daily/&lt;date&gt;.md</code> and pushes it · reload to pull</div>
 {{BODY}}
 <script>
   const count = document.getElementById('count');
@@ -153,7 +182,7 @@ PAGE = """<!doctype html>
     const item = box.closest('.item');
     item.classList.add('busy');
     let r;
-    try { r = await fetch('/toggle', { method: 'POST', body: JSON.stringify({ file: box.dataset.file, line: +box.dataset.line, done: box.checked }) }); }
+    try { r = await fetch('/toggle', { method: 'POST', body: JSON.stringify({ file: box.dataset.file, line: +box.dataset.line, text: box.dataset.text, done: box.checked }) }); }
     catch (e) { r = null; }
     item.classList.remove('busy');
     if (!r) { box.checked = !box.checked; fail('Server not running — nothing was saved. Run  python3 skills/today/scripts/todo.py  and reload.'); return; }
@@ -183,7 +212,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path != "/":
             return self._send(404, "not found", "text/plain")
-        self._send(200, render_page())
+        self._send(200, render_page(refresh()))
 
     def do_POST(self):
         if self.path == "/quit":
@@ -194,7 +223,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(404, "not found", "text/plain")
         req = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))
         file = str(req.get("file", ""))
-        new = toggle(file, int(req.get("line", -1)), bool(req.get("done")))
+        refresh()
+        new = toggle(file, int(req.get("line", -1)), str(req.get("text", "")), bool(req.get("done")))
         if new is None:
             return self._send(409, json.dumps({"error": "line moved; reload"}), "application/json")
         threading.Thread(target=push, args=(file,)).start()

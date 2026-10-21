@@ -6,10 +6,10 @@ A wiki of what came through the owner's Slack and Outlook, and the actions that 
 
 `wiki/` is a checkout of the private repo `ccomkhj/organizer-wiki`, ignored here, so note content never lands in this public repo — only the structure does.
 
-Two writers share it: a weekday cloud routine and the laptop. Every flow that writes the wiki starts with `git -C wiki pull --rebase --autostash` and ends by committing and pushing `main` — `git -C wiki add -A && git -C wiki commit -qm "<sync|lint|query|tick> <date>" && git -C wiki push -q`. A rejected push → pull again, then push. A rebase conflict keeps both sides' lines, and a `- [x]` beats a `- [ ]`. An edit left unpushed is one the other writer never sees.
+Two writers share it: a weekday cloud routine and the laptop. Every flow that writes the wiki starts with `git -C wiki pull --rebase --autostash` and ends by committing and pushing `main` — `git -C wiki add -A && git -C wiki commit -qm "<sync|lint|query|tick|today> <date>" && git -C wiki push -q`. A rejected push → pull again, then push. A rebase conflict keeps both sides' lines, and a `- [x]` beats a `- [ ]`. An edit left unpushed is one the other writer never sees.
 
 - `wiki/index.md` — catalog: one line per page (topics, people, daily notes by month). Read it first when answering anything; `/sync` keeps it current.
-- `wiki/log.md` — append-only record, one `## [YYYY-MM-DD] sync|lint|query | …` heading per event. `grep "^## \[" wiki/log.md | tail -5` shows what happened recently.
+- `wiki/log.md` — append-only record, one `## [YYYY-MM-DD] sync|lint|query|today | …` heading per event. `grep "^## \[" wiki/log.md | tail -5` shows what happened recently.
 - `wiki/daily/YYYY-MM-DD.md` — one file per day: exchanges, actions, waiting-ons.
 - `wiki/topics/<slug>.md` — running notes on a topic that keeps recurring. Create one once a topic has spanned three daily notes, and link it from them as `[[topics/<slug>]]`.
 - `wiki/people/<Name>.md` — one page per person linked as `[[Name]]`: role, current threads, what they owe and are owed, short history. Created on first link, refreshed by `/sync`.
